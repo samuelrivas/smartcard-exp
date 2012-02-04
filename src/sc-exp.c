@@ -29,23 +29,33 @@
 #include <stdio.h>
 #include <winscard.h>
 #include <scl-log.h>
+#include <scl-assert.h>
 
 #include "sc-exp.h"
 
 int main(void) {
 
   SCARDCONTEXT context;
-  LPSTR mszReaders;
-  DWORD dwReaders = 0;
+  SCARDHANDLE card;
+  LPSTR readers;
+  DWORD readersLength = 0, protocol = 0;
 
   CHECK(SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &context));
 
-  CHECK(SCardListReaders(context, NULL, NULL, &dwReaders));
-  mszReaders = malloc(sizeof(char) * dwReaders);
-  CHECK(SCardListReaders(context, NULL, mszReaders, &dwReaders));
+  CHECK(SCardListReaders(context, NULL, NULL, &readersLength));
+  readers = malloc(sizeof(char) * readersLength);
+  CHECK(SCardListReaders(context, NULL, readers, &readersLength));
+  ASSERT(readers[0] != '\0');
 
+  CHECK(SCardConnect(context, &readers[0], SCARD_SHARE_SHARED,
+                     SCARD_PROTOCOL_T0, &card, &protocol));
+  ASSERT(protocol == SCARD_PROTOCOL_T0);
+
+  INFO("Smart card connected with protocol T0");
+
+  CHECK(SCardDisconnect(card, SCARD_UNPOWER_CARD));
   CHECK(SCardReleaseContext(context));
 
-  free(mszReaders);
+  free(readers);
   return EXIT_SUCCESS;
 }
