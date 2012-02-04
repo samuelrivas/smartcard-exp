@@ -25,19 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <winscard.h>
-#include <scl-log.h>
+#ifndef _SC_EXP_H_
+#define _SC_EXP_H_
 
-#include "sc-exp.h"
+#define CHECK(__call) {                                                 \
+    LONG result = __call;                                               \
+    if (result != SCARD_S_SUCCESS) {                                    \
+      PANIC("SCard call failed: %s", pcsc_stringify_error(result));     \
+    }                                                                   \
+  }
 
-int main(void) {
-
-  SCARDCONTEXT context;
-
-  CHECK(SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &context));
-  CHECK(SCardReleaseContext(context));
-
-  return EXIT_SUCCESS;
-}
+#endif

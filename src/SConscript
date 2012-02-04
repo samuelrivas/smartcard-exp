@@ -5,6 +5,7 @@ Import(['env'])
 sources = glob.glob("*.c")
 
 env.ParseConfig('pkg-config --cflags --libs libpcsclite')
+env.ParseConfig('pkg-config --cflags --libs libsamclib')
 
 sc_exp = env.Program('sc-exp', sources)
 env.Install('#/bin', sc_exp)
