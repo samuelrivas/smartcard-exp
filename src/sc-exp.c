@@ -35,9 +35,17 @@
 int main(void) {
 
   SCARDCONTEXT context;
+  LPSTR mszReaders;
+  DWORD dwReaders = 0;
 
   CHECK(SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &context));
+
+  CHECK(SCardListReaders(context, NULL, NULL, &dwReaders));
+  mszReaders = malloc(sizeof(char) * dwReaders);
+  CHECK(SCardListReaders(context, NULL, mszReaders, &dwReaders));
+
   CHECK(SCardReleaseContext(context));
 
+  free(mszReaders);
   return EXIT_SUCCESS;
 }
