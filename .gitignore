@@ -1,0 +1,5 @@
+*~
+*.dblite
+*.o
+src/sc-exp
+bin/*

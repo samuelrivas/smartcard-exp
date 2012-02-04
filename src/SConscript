@@ -1,0 +1,10 @@
+import glob
+
+Import(['env'])
+
+sources = glob.glob("*.c")
+
+env.ParseConfig('pkg-config --cflags --libs libpcsclite')
+
+sc_exp = env.Program('sc-exp', sources)
+env.Install('#/bin', sc_exp)
