@@ -27,6 +27,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <winscard.h>
 #include <scl-log.h>
 #include <scl-malloc.h>
@@ -100,6 +101,24 @@ static void getAtr(SCARDHANDLE card, BYTE *atr, DWORD *atrLen) {
                     atr, atrLen));
 }
 
+static void sendData(SCARDHANDLE card) {
+
+  BYTE send[] = { 0xD2, 0x04, 0x03, 0x00, 0x01, 0x3D };
+  BYTE recv[40] = "";
+  DWORD sendLen, recvLen;
+  SCARD_IO_REQUEST recvPci;
+
+  /* Make valgrind happy */
+  memset(&recvPci, 0, sizeof(recvPci));
+
+  sendLen = sizeof(send);
+  recvLen = sizeof(recv);
+  CHECK(SCardTransmit(card, SCARD_PCI_T0, send, sendLen, &recvPci, recv,
+                      &recvLen));
+
+  DEBUG("Got %ld bytes: %02X %02X", recvLen, recv[0], recv[1]);
+}
+
 /* Public Functions */
 int main(void) {
 
@@ -114,6 +133,8 @@ int main(void) {
   getAtr(card, atr, &atrLen);
   stringifyAtr(atr, atrLen, atrString);
   INFO("ATR: %s", atrString);
+
+  sendData(card);
 
   disconnectCard(context, card);
 
