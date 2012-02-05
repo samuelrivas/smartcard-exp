@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <winscard.h>
 #include <scl-log.h>
+#include <scl-malloc.h>
 #include <scl-assert.h>
 
 #include "sc-exp.h"
@@ -49,7 +50,7 @@ static void connectCard(SCARDCONTEXT *context, SCARDHANDLE *card) {
 
   readersLength = 0;
   CHECK(SCardListReaders(*context, NULL, NULL, &readersLength));
-  readers = malloc(sizeof(char) * readersLength);
+  MALLOC(readers, (char *), (sizeof(char) * readersLength));
   CHECK(SCardListReaders(*context, NULL, readers, &readersLength));
   ASSERT(readers[0] != '\0');
 
