@@ -38,7 +38,11 @@ int main(void) {
   SCARDCONTEXT context;
   SCARDHANDLE card;
   LPSTR readers;
-  DWORD readersLength = 0, protocol = 0;
+  DWORD readersLength = 0, protocol = 0, atrLen = 0, readerNameLen = 0,
+    cardState = 0;
+  BYTE atr[MAX_ATR_SIZE] = "";
+  char atrString[MAX_ATR_SIZE * 3];
+  char readerName[MAX_READERNAME] = "";
 
   CHECK(SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &context));
 
@@ -51,7 +55,22 @@ int main(void) {
                      SCARD_PROTOCOL_T0, &card, &protocol));
   ASSERT(protocol == SCARD_PROTOCOL_T0);
 
-  INFO("Smart card connected with protocol T0");
+  INFO("Card connected with protocol T0");
+
+  atrLen = sizeof(atr);
+  readerNameLen = sizeof(readerName);
+  CHECK(SCardStatus(card, readerName, &readerNameLen, &cardState, &protocol,
+                    atr, &atrLen));
+
+  INFO("Card reader: %s", readerName);
+  register int i;
+  char *p = atrString;
+  for (i=0; i<atrLen; i++) {
+    snprintf(p, 4, "%02X ", atr[i]);
+    p += 3;
+  }
+  p[-1] = '\0';
+  INFO("ATR: %s", atrString);
 
   CHECK(SCardDisconnect(card, SCARD_UNPOWER_CARD));
   CHECK(SCardReleaseContext(context));
