@@ -73,13 +73,13 @@ static void disconnectCard(SCARDCONTEXT context, SCARDHANDLE card) {
  * outString: The stringified output. It must be allocated by the caller (each
  *            input byte requires 3 output bytes, plus the end null
  */
-static void stringifyAtr(const BYTE *atr, DWORD len, char *outString) {
+static void stringifyBuff(const BYTE *buff, DWORD len, char *outString) {
 
   register int i;
   char *p = outString;
 
   for (i=0, p = outString; i < len; i++, p += 3) {
-    snprintf(p, 4, "%02X ", atr[i]);
+    snprintf(p, 4, "%02X ", buff[i]);
   }
   p[-1] = '\0';
 }
@@ -101,6 +101,11 @@ static void getAtr(SCARDHANDLE card, BYTE *atr, DWORD *atrLen) {
                     atr, atrLen));
 }
 
+/*
+ * Out params:
+ * recv: A pointer to received bytes. It must be allocated with enough memory
+ * recvLen: The amount of bytes read as response
+ */
 static void sendData(SCARDHANDLE card, const BYTE *send, DWORD sendLen,
                      BYTE *recv, DWORD *recvLen) {
 
@@ -120,19 +125,21 @@ int main(void) {
   SCARDHANDLE card;
   DWORD atrLen, recvLen;
   BYTE atr[MAX_ATR_SIZE];
-  char atrString[MAX_ATR_SIZE * 3 + 1];
+  char buffString[MAX_ATR_SIZE * 3 + 1];
   BYTE send[] = { 0xD2, 0x04, 0x03, 0x00, 0x01, 0x3D };
-  BYTE recv[40] = "";
+  BYTE recv[40];
 
   connectCard(&context, &card);
 
   getAtr(card, atr, &atrLen);
-  stringifyAtr(atr, atrLen, atrString);
-  INFO("ATR: %s", atrString);
+  stringifyBuff(atr, atrLen, buffString);
+  INFO("ATR: %s", buffString);
 
   recvLen = sizeof(recv);
   sendData(card, send, sizeof(send), recv, &recvLen);
-  DEBUG("Got %ld bytes: %02X %02X", recvLen, recv[0], recv[1]);
+  ASSERT(recvLen * 3 + 1 <= sizeof(buffString));
+  stringifyBuff(recv, recvLen, buffString);
+  DEBUG("Response (%ld bytes): %s", recvLen, buffString);
 
   disconnectCard(context, card);
 
