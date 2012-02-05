@@ -101,22 +101,16 @@ static void getAtr(SCARDHANDLE card, BYTE *atr, DWORD *atrLen) {
                     atr, atrLen));
 }
 
-static void sendData(SCARDHANDLE card) {
+static void sendData(SCARDHANDLE card, const BYTE *send, DWORD sendLen,
+                     BYTE *recv, DWORD *recvLen) {
 
-  BYTE send[] = { 0xD2, 0x04, 0x03, 0x00, 0x01, 0x3D };
-  BYTE recv[40] = "";
-  DWORD sendLen, recvLen;
   SCARD_IO_REQUEST recvPci;
 
   /* Make valgrind happy */
   memset(&recvPci, 0, sizeof(recvPci));
 
-  sendLen = sizeof(send);
-  recvLen = sizeof(recv);
   CHECK(SCardTransmit(card, SCARD_PCI_T0, send, sendLen, &recvPci, recv,
-                      &recvLen));
-
-  DEBUG("Got %ld bytes: %02X %02X", recvLen, recv[0], recv[1]);
+                      recvLen));
 }
 
 /* Public Functions */
@@ -124,9 +118,11 @@ int main(void) {
 
   SCARDCONTEXT context;
   SCARDHANDLE card;
-  DWORD atrLen;
+  DWORD atrLen, recvLen;
   BYTE atr[MAX_ATR_SIZE];
   char atrString[MAX_ATR_SIZE * 3 + 1];
+  BYTE send[] = { 0xD2, 0x04, 0x03, 0x00, 0x01, 0x3D };
+  BYTE recv[40] = "";
 
   connectCard(&context, &card);
 
@@ -134,7 +130,9 @@ int main(void) {
   stringifyAtr(atr, atrLen, atrString);
   INFO("ATR: %s", atrString);
 
-  sendData(card);
+  recvLen = sizeof(recv);
+  sendData(card, send, sizeof(send), recv, &recvLen);
+  DEBUG("Got %ld bytes: %02X %02X", recvLen, recv[0], recv[1]);
 
   disconnectCard(context, card);
 
