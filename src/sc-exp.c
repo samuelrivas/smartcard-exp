@@ -33,48 +33,88 @@
 
 #include "sc-exp.h"
 
+/* Static Functions */
+
+/*
+ * Out params:
+ *  * context: the smartcard context
+ *  * card: the smartcard handle
+ */
+static void connectCard(SCARDCONTEXT *context, SCARDHANDLE *card) {
+
+  LPSTR readers;
+  DWORD readersLength, protocol;
+
+  CHECK(SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, context));
+
+  readersLength = 0;
+  CHECK(SCardListReaders(*context, NULL, NULL, &readersLength));
+  readers = malloc(sizeof(char) * readersLength);
+  CHECK(SCardListReaders(*context, NULL, readers, &readersLength));
+  ASSERT(readers[0] != '\0');
+
+  CHECK(SCardConnect(*context, &readers[0], SCARD_SHARE_SHARED,
+                     SCARD_PROTOCOL_T0, card, &protocol));
+  ASSERT(protocol == SCARD_PROTOCOL_T0);
+
+  free(readers);
+  INFO("T0 card connected");
+}
+
+static void disconnectCard(SCARDCONTEXT context, SCARDHANDLE card) {
+  CHECK(SCardDisconnect(card, SCARD_UNPOWER_CARD));
+  CHECK(SCardReleaseContext(context));
+}
+
+/*
+ * Out params:
+ * outString: The stringified output. It must be allocated by the caller (each
+ *            input byte requires 3 output bytes, plus the end null
+ */
+static void stringifyAtr(const BYTE *atr, DWORD len, char *outString) {
+
+  register int i;
+  char *p = outString;
+
+  for (i=0, p = outString; i < len; i++, p += 3) {
+    snprintf(p, 4, "%02X ", atr[i]);
+  }
+  p[-1] = '\0';
+}
+
+/*
+ * Out params:
+ * atr: A pointer to ATR bytes. It must be allocated with at least MAX_ATR_SIZE
+ *      bytes
+ * atrLen: The amount of bytes in the ATR
+ */
+static void getAtr(SCARDHANDLE card, BYTE *atr, DWORD *atrLen) {
+
+  DWORD protocol, readerNameLen, cardState;
+  char readerName[MAX_READERNAME];
+
+  *atrLen = sizeof(BYTE[MAX_ATR_SIZE]);
+  readerNameLen = sizeof(readerName);
+  CHECK(SCardStatus(card, readerName, &readerNameLen, &cardState, &protocol,
+                    atr, atrLen));
+}
+
+/* Public Functions */
 int main(void) {
 
   SCARDCONTEXT context;
   SCARDHANDLE card;
-  LPSTR readers;
-  DWORD readersLength = 0, protocol = 0, atrLen = 0, readerNameLen = 0,
-    cardState = 0;
-  BYTE atr[MAX_ATR_SIZE] = "";
-  char atrString[MAX_ATR_SIZE * 3];
-  char readerName[MAX_READERNAME] = "";
+  DWORD atrLen;
+  BYTE atr[MAX_ATR_SIZE];
+  char atrString[MAX_ATR_SIZE * 3 + 1];
 
-  CHECK(SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &context));
+  connectCard(&context, &card);
 
-  CHECK(SCardListReaders(context, NULL, NULL, &readersLength));
-  readers = malloc(sizeof(char) * readersLength);
-  CHECK(SCardListReaders(context, NULL, readers, &readersLength));
-  ASSERT(readers[0] != '\0');
-
-  CHECK(SCardConnect(context, &readers[0], SCARD_SHARE_SHARED,
-                     SCARD_PROTOCOL_T0, &card, &protocol));
-  ASSERT(protocol == SCARD_PROTOCOL_T0);
-
-  INFO("Card connected with protocol T0");
-
-  atrLen = sizeof(atr);
-  readerNameLen = sizeof(readerName);
-  CHECK(SCardStatus(card, readerName, &readerNameLen, &cardState, &protocol,
-                    atr, &atrLen));
-
-  INFO("Card reader: %s", readerName);
-  register int i;
-  char *p = atrString;
-  for (i=0; i<atrLen; i++) {
-    snprintf(p, 4, "%02X ", atr[i]);
-    p += 3;
-  }
-  p[-1] = '\0';
+  getAtr(card, atr, &atrLen);
+  stringifyAtr(atr, atrLen, atrString);
   INFO("ATR: %s", atrString);
 
-  CHECK(SCardDisconnect(card, SCARD_UNPOWER_CARD));
-  CHECK(SCardReleaseContext(context));
+  disconnectCard(context, card);
 
-  free(readers);
   return EXIT_SUCCESS;
 }
