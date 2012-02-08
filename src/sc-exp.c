@@ -71,7 +71,7 @@ static void disconnectCard(SCARDCONTEXT context, SCARDHANDLE card) {
 /*
  * Out params:
  * outString: The stringified output. It must be allocated by the caller (each
- *            input byte requires 3 output bytes, plus the end null
+ *            input byte requires 3 output bytes
  */
 static void stringifyBuff(const BYTE *buff, DWORD len, char *outString) {
 
